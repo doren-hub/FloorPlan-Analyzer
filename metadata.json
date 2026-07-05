@@ -1,0 +1,5 @@
+{
+  "name": "FloorPlan Analyzer",
+  "description": "Analyze floor plan images to calculate and label room dimensions in meters using pixel-level scaling.",
+  "requestFramePermissions": []
+}
