@@ -1,20 +1,83 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# FloorPlan Analyzer
 
-# Run and deploy your AI Studio app
+間取り図の画像をブラウザに読み込み、既知の寸法を基準にスケールを設定して、線の長さ（m）や矩形の面積（m²・畳）を測るための Web アプリです。Gemini API を使って、間取り図に書かれた部屋名や畳数を読み取る補助機能もあります。
 
-This contains everything you need to run your app locally.
+React + Vite で作られたクライアントサイドのアプリで、Google AI Studio で生成されたプロジェクトをもとにしています。
 
-View your app in AI Studio: https://ai.studio/apps/74d7cd45-ae4e-40f3-95d3-84cb10e8e8ab
+## 主な機能
 
-## Run Locally
+- **画像の読み込み**: ローカルの画像ファイル（`image/*`）を選んでキャンバスに表示します。
+- **スケール設定（Calibrate）**: 次の3通りから選べます。
+  - 長さで設定（m）: 2点をクリックして線を引き、その実際の長さを入力
+  - 面積で設定（m²）: 2点をクリックして矩形を描き、その実際の面積を入力
+  - 畳数で設定（畳）: 矩形を描き、畳数を入力（1畳 = 1.62m² で換算）
+- **長さの計測（Line）**: 2点間の距離を m で表示します。
+- **面積の計測（Area）**: 2点を対角とする矩形の面積を m² と畳で表示します。
+- **計測結果の一覧**: サイドバーに一覧表示し、個別削除・全削除ができます。
+- **表示の拡大縮小**: 10%〜500% のズーム、画面に合わせる（Fit）、100% 表示。
+- **AI Assist**: 画像を Gemini（モデル `gemini-3-flash-preview`）に送り、部屋名・畳数・図面上の寸法を日本語で列挙させ、結果をサイドバーに表示します。
 
-**Prerequisites:**  Node.js
+計測ツール（Line / Area）はスケール設定が済むまで使えません。
 
+## 動作環境
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- Node.js と npm（`package.json` にバージョン指定はありません。Node.js 22 で `npm install`・`npm run lint`・`npm run build` が通ることを確認しています）
+- モダンな Web ブラウザ
+- AI Assist を使う場合は Gemini API キー
+
+## セットアップと起動
+
+1. 依存パッケージをインストールします。
+
+   ```bash
+   npm install
+   ```
+
+2. AI Assist を使う場合は、`.env.example` を参考にプロジェクト直下に `.env.local` などの環境変数ファイルを作り、`GEMINI_API_KEY` に自分の API キーを設定します。`.env*` は `.gitignore` 済みです（`.env.example` を除く）。
+
+3. 開発サーバーを起動します。ポート 3000、全インターフェース（`0.0.0.0`）で待ち受けます。
+
+   ```bash
+   npm run dev
+   ```
+
+   ブラウザで `http://localhost:3000` を開きます。
+
+### その他の npm スクリプト
+
+| コマンド | 内容 |
+| --- | --- |
+| `npm run build` | `dist/` に本番用ビルドを出力 |
+| `npm run preview` | ビルド結果をプレビュー |
+| `npm run lint` | TypeScript の型チェック（`tsc --noEmit`） |
+| `npm run clean` | `dist/` を削除 |
+
+環境変数 `DISABLE_HMR=true` を設定すると、開発サーバーのホットリロード（HMR）が無効になります。
+
+## 使い方
+
+1. 「Upload Plan」またはキャンバス領域をクリックして、間取り図の画像を選びます。
+2. 「Calibrate」にカーソルを合わせ、設定方法（長さ / 面積 / 畳数）を選びます。
+3. 寸法が分かっている箇所の始点と終点（矩形なら対角の2点）をクリックし、表示されたダイアログに実寸を入力して「Save Scale」を押します。
+4. 「Line」または「Area」を選び、2点をクリックして計測します。結果は図面上とサイドバーに表示されます。
+5. 必要に応じて「AI Assist」を押すと、AI が読み取った部屋情報が「AI Insights」に表示されます。
+
+## 既知の制約・不具合
+
+コードから確認できたものです。
+
+- **API キーがブラウザに埋め込まれる**: `vite.config.ts` で `GEMINI_API_KEY` をビルド時にクライアントコードへ埋め込んでいます。ビルド結果を公開すると API キーも公開されるため、公開環境にそのままデプロイしないでください。
+- **ドラッグ＆ドロップと PDF は未対応**: 画面には「Drag and drop」「PDF」と表示されますが、ドロップ処理は実装されておらず、ファイル選択も `image/*` のみです。
+- **AI Assist は画像を常に JPEG として送信**: PNG などでも MIME タイプは `image/jpeg` で送られます。
+- **AI Assist の失敗は画面に表示されない**: エラーはブラウザのコンソールに出力されるだけです。
+- **計測結果は保存・書き出しされない**: ページを再読み込みすると消えます。エクスポート機能はありません。
+- **画像を消しても計測とスケールが残る**: ゴミ箱ボタンは画像だけを消します（新しい画像を読み込むとリセットされます）。
+- **スケール設定のダイアログをキャンセルした後**: 描いた点が残ったままになり、次のクリックで再びダイアログが開きます。
+- **面積・畳数でのスケール設定は縦横比を考慮しない**: 矩形の面積から縦横共通の縮尺を求めるため、図面の縦横の縮尺が同じであることが前提です。
+- **面積計測は軸に平行な矩形のみ**: 斜めの領域や多角形には対応していません。
+- 1畳は 1.62m² として換算しています。
+- 自動テストはありません。
+
+## ライセンス
+
+ライセンスファイルは含まれていません。
