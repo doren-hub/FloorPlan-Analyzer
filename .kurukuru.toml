@@ -1,0 +1,34 @@
+version = "0.60.0"
+base_branch = "main"
+merge_method = "squash"
+test = "npm run build"
+lint = "npm run lint"
+constraints = [
+  "Preserve application behavior and the existing README; onboarding is management-only.",
+  "Never read credentials, .env* (including examples), or auth.json. Verification requires no real Gemini API key.",
+  "Preserve AI Studio DISABLE_HMR behavior and existing Vite configuration.",
+  "Never modify the source checkout from the independent onboarding clone or register that clone.",
+  "Merge only after same-head local verification, Claude OK, and kurukuru ci-wait exit 0; no No-CI exception.",
+  "Do not register CI runners, change runner configuration, bypass permissions, or recursively launch runners."
+]
+review_notes = [
+  "Read AGENTS.local.md. The test gate is the existing Vite production build, not an automated functional test suite.",
+  "Use Read/Glob/Grep only; the caller supplies head-bound local verification while Draft. Reuse the same session."
+]
+review_allowed = []
+review_model = "claude-opus-5-5"
+review_effort = "low"
+
+[review]
+read_only = true
+
+[ci]
+merge_without_ci = false
+
+[runner]
+kind = "codex"
+setup = "npm install --no-package-lock"
+deny_files = [".env*", "**/.env*", "auth.json", "**/auth.json"]
+
+[runner.codex]
+args = ""

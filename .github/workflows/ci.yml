@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'metadata.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - '.gitignore'
+      - 'AGENTS.md'
+      - 'AGENTS.local.md'
+      - '.kurukuru.toml'
+      - 'docs/development-workflow.md'
+      - '.github/workflows/ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'metadata.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - '.gitignore'
+      - 'AGENTS.md'
+      - 'AGENTS.local.md'
+      - '.kurukuru.toml'
+      - 'docs/development-workflow.md'
+      - '.github/workflows/ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 10
+    steps:
+      - name: Clean workspace before checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE"
+          find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify runner Python
+        run: |
+          python3 -c 'import sys; assert sys.version_info >= (3, 11, 8), sys.version'
+          python3 --version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-package-lock
+      - name: Build smoke check
+        run: npm run build
+      - name: TypeScript lint
+        run: npm run lint
+      - name: Remove workspace after job
+        if: always()
+        working-directory: ${{ runner.temp }}
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+          fi
